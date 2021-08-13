@@ -48,11 +48,18 @@ class Vehicle():
     """
     This class represents the vehicle tag/info in the data
     """
-    def __init__(self,id='',make='',vin_number='',model_year=''):
+    def __init__(self,id='',make='',
+                 vin_number='',model_year='',
+                 model='', manufacturer='',
+                 plant_country='', vehicle_type=''):
         self.id=id
         self.make=make
         self.vin_number=vin_number
         self.model_year=model_year
+        self.model=model
+        self.manufacturer=manufacturer
+        self.plant_country=plant_country
+        self.vehicle_type=vehicle_type
 
     def get_dic(self):
         """
@@ -61,6 +68,10 @@ class Vehicle():
         vehicle_dic={'id':self.id,
                       'make':self.make,
                       'vin_number':self.vin_number,
-                      'model_year':self.model_year}
+                      'model_year':self.model_year,
+                      'model':self.model,
+                      'manufacturer':self.manufacturer,
+                      'plant_country':self.plant_country,
+                      'vehicle_type':self.vehicle_type}
 
         return vehicle_dic
