@@ -4,6 +4,45 @@ from bs4 import BeautifulSoup
 import time
 from pathlib import Path
 import pandas as pd
+import pymongo, urllib
+
+def db_connect():
+    """
+    fuction to connect to mongodb using pymongo module
+    """
+    db_credentials = {
+                    'database_name': 'trufla',
+                    'username': 'trufla_admin',
+                    'password': 'P@ssw0rd',
+                    'cluster': 'cluster0'
+    }
+    CONNECTION_STRING = "mongodb+srv://{}:{}@{}.anspp.mongodb.net/{}?retryWrites=true&w=majority"
+    CONNECTION_STRING = CONNECTION_STRING.format(db_credentials['username'],
+                                                 urllib.parse.quote(db_credentials['password']),
+                                                 db_credentials['cluster'],
+                                                 db_credentials['database_name'])
+
+    client = pymongo.MongoClient(CONNECTION_STRING)
+    #get database from cluster
+    return client[db_credentials['database_name']]
+
+def insert_to_db(format,data):
+    """
+    inserts data into connected mongodb
+
+    :format: data file format (xml, csv, ...)
+    :data: data to be inserted in python dictionary format
+    """
+
+    db = db_connect()
+
+    if format=='xml':
+        xml_collection=db['xml']
+        xml_collection.insert_one(data)
+
+    elif format=='csv':
+        csv_collection=db['csv']
+        csv_collection.insert_one(data)
 
 def parser(file_format,source_path1,source_path2):
     """
@@ -37,13 +76,8 @@ def parser(file_format,source_path1,source_path2):
                                                 vehicle.find('ModelYear').text))
         #using Transaction.get_dic() to get a dictionary of transaction data
         data_dic=transaction.get_dic()
-        #required output file name: <timeStamp>_<sourceFileName>.json
-        out_filename='output/xml/' + str(time.time()) + '_' + Path(source_path1).stem + '.json'
-        #check if output directory exists, if not make one
-        Path('output/xml/').mkdir(parents=True, exist_ok=True)
-        #dump dictionary into a .json file, ensure_ascii is false in case names contains latin characters (é)
-        with open(out_filename, 'w') as f:
-            json.dump(data_dic, f, ensure_ascii=False, indent=3)
+        #inserting data to database
+        insert_to_db('xml',data_dic)
 
     elif file_format=='csv':
         #reading csv files into pandas dataframe
@@ -72,15 +106,11 @@ def parser(file_format,source_path1,source_path2):
                                                     str(cst.vin_number.iloc[i]),
                                                     str(cst.model_year.iloc[i])))
             data_dic=transaction.get_dic()
-            #output file name
-            out_filename='output/csv/' + str(time.time()) + '_' + Path(source_path1).stem + '.json'
-            #check if output directory exists, if not make one
-            Path('output/csv/').mkdir(parents=True, exist_ok=True)
-            #get a json file for each customer in customers.csv
-            with open(out_filename, 'w') as f:
-                json.dump(data_dic, f, ensure_ascii=False, indent=4)
-            #reset transaction parameters to start with next customer
+            #inserting data to database
+            insert_to_db('csv',data_dic)
             transaction = Transaction()
+
+
 
 #to run script from shell
 if __name__=='__main__':
