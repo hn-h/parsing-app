@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 import pandas as pd
 import requests
+import pymongo, urllib
 
 def db_connect():
     """
