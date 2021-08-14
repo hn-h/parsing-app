@@ -6,6 +6,43 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+def db_connect():
+    """
+    fuction to connect to mongodb using pymongo module
+    """
+    db_credentials = {
+                    'database_name': 'trufla',
+                    'username': 'trufla_admin',
+                    'password': 'P@ssw0rd',
+                    'cluster': 'cluster0'
+    }
+    CONNECTION_STRING = "mongodb+srv://{}:{}@{}.anspp.mongodb.net/{}?retryWrites=true&w=majority"
+    CONNECTION_STRING = CONNECTION_STRING.format(db_credentials['username'],
+                                                 urllib.parse.quote(db_credentials['password']),
+                                                 db_credentials['cluster'],
+                                                 db_credentials['database_name'])
+
+    client = pymongo.MongoClient(CONNECTION_STRING)
+    #get database from cluster
+    return client[db_credentials['database_name']]
+
+def insert_to_db(format,data):
+    """
+    inserts data into connected mongodb
+    :format: data file format (xml, csv, ...)
+    :data: data to be inserted in python dictionary format
+    """
+
+    db = db_connect()
+
+    if format=='xml':
+        xml_collection=db['xml']
+        xml_collection.insert_one(data)
+
+    elif format=='csv':
+        csv_collection=db['csv']
+        csv_collection.insert_one(data)
+
 def decode_vin(vin_number, model_year):
     # define a list of parameters needed from the vin API
     info_parameters = ['Model', 'Manufacturer', 'PlantCountry', 'VehicleType']
@@ -62,6 +99,8 @@ def parser(file_format,source_path1,source_path2):
         #dump dictionary into a .json file, ensure_ascii is false in case names contains latin characters (é)
         with open(out_filename, 'w') as f:
             json.dump(data_dic, f, ensure_ascii=False, indent=3)
+        #inserting data to database
+        insert_to_db('xml',data_dic)
 
     elif file_format=='csv':
         #reading csv files into pandas dataframe
@@ -101,6 +140,8 @@ def parser(file_format,source_path1,source_path2):
             #get a json file for each customer in customers.csv
             with open(out_filename, 'w') as f:
                 json.dump(data_dic, f, ensure_ascii=False, indent=4)
+            #inserting data to database
+            insert_to_db('csv',data_dic)
             #reset transaction parameters to start with next customer
             transaction = Transaction()
 
